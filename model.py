@@ -7,7 +7,7 @@ class ActorCritic(nn.Module):
   def __init__(self, observation_space, action_space, hidden_size):
     super(ActorCritic, self).__init__()
     self.state_size = observation_space.shape[0]
-    self.action_size = action_space.n
+    self.action_size = action_space.shape[0]
 
     self.fc1 = nn.Linear(self.state_size, hidden_size)
     self.lstm = nn.LSTMCell(hidden_size, hidden_size)

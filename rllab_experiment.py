@@ -53,39 +53,43 @@ def run_acer(variant):
   os.environ['MKL_NUM_THREADS'] = '1'
 
   # Setup
-  args = parser.parse_args()
+  # args = parser.parse_args()
   # Creating directories.
-  save_dir = os.path.join('results', args.name)  
+  save_dir = os.path.join('results', 'results')  
   if not os.path.exists(save_dir):
     os.makedirs(save_dir)  
   print(' ' * 26 + 'Options')
 
+  """
   # Saving parameters
   with open(os.path.join(save_dir, 'params.txt'), 'w') as f:
     for k, v in vars(args).items():
       print(' ' * 26 + k + ': ' + str(v))
       f.write(k + ' : ' + str(v) + '\n')
+  """
   # args.env = 'CartPole-v1'  # TODO: Remove hardcoded environment when code is more adaptable
   # mp.set_start_method(platform.python_version()[0] == '3' and 'spawn' or 'fork')  # Force true spawning (not forking) if available
   torch.manual_seed(variant['seed'])
   T = Counter()  # Global shared counter
-  gym.logger.set_level(gym.logger.ERROR)  # Disable Gym warnings
+  # gym.logger.set_level(gym.logger.ERROR)  # Disable Gym warnings
 
   # Create shared network
   env = gym.make(variant['env'])
-  shared_model = ActorCritic(env.observation_space, env.action_space, args.hidden_size)
+  shared_model = ActorCritic(env.observation_space, env.action_space, variant['hidden_size']) 
   shared_model.share_memory()
+  """
   if args.model and os.path.isfile(args.model):
     # Load pretrained weights
     shared_model.load_state_dict(torch.load(args.model))
+  """
   # Create average network
-  shared_average_model = ActorCritic(env.observation_space, env.action_space, args.hidden_size)
+  shared_average_model = ActorCritic(env.observation_space, env.action_space, variant['hidden_size'])
   shared_average_model.load_state_dict(shared_model.state_dict())
   shared_average_model.share_memory()
   for param in shared_average_model.parameters():
     param.requires_grad = False
   # Create optimiser for shared network parameters with shared statistics
-  optimiser = SharedRMSprop(shared_model.parameters(), lr=args.lr, alpha=args.rmsprop_decay)
+  optimiser = SharedRMSprop(shared_model.parameters(), lr=variant['lr'], alpha=0.99)
   optimiser.share_memory()
   env.close()
 
@@ -95,14 +99,14 @@ def run_acer(variant):
     writer.writerow(fields)
   # Start validation agent
   processes = []
-  p = mp.Process(target=test, args=(0, args, T, shared_model))
+  p = mp.Process(target=test, args=(0, variant, T, shared_model))
   p.start()
   processes.append(p)
 
-  if not args.evaluate:
+  if not variant['evaluate']:
     # Start training agents
-    for rank in range(1, args.num_processes + 1):
-      p = mp.Process(target=train, args=(rank, args, T, shared_model, shared_average_model, optimiser))
+    for rank in range(1, variant['num-processes'] + 1):
+      p = mp.Process(target=train, args=(rank, variant, T, shared_model, shared_average_model, optimiser))
       p.start()
       print('Process ' + str(rank) + ' started')
       processes.append(p)
@@ -113,6 +117,33 @@ def run_acer(variant):
 
 COMMON_PARAMS = {
     'seed': [2 + 10*i for i in range(5)],
+    'hidden_size': 32,
+    'num-processes': 6,
+    'T-max': 5000000,
+    't_max': 100,
+    'max-episode-length': 1000,
+    'on-policy': False,
+    'memory_capacity': 100000,
+    'replay_ratio': 4,
+    'replay_start': 20000,
+    'discount': 0.99,
+    'trace_decay': 1,
+    'trace_max': 10,
+    'trust_region': False,
+    'trust_region_decay': 0.99,
+    'trust_region_threshold': 1,
+    'reward_clip': False,
+    'lr': 0.0007,
+    'lr_decay': False,
+    'rmsprop_decay': 0.99,
+    'batch_size': 16,
+    'entropy_weight': 0.0001,
+    'max_gradient_norm': 40,
+    'evaluate': False, # ?
+    'evaluation-interval': 1000,
+    'evaluation-episodes': 1,
+    'render': False,
+    'name': 'results'
 }
 
 from rllab import config
@@ -154,7 +185,7 @@ def launch_experiments(variant_generator):
 
         run_sac_experiment(
             run_acer,
-            mode='ec2',
+            mode='local',
             variant=variant,
             exp_prefix=experiment_prefix,
             exp_name=experiment_name,
@@ -165,6 +196,7 @@ def launch_experiments(variant_generator):
             snapshot_gap=1000,
             sync_s3_pkl=False,
         )
+        return
 
 def main():
     # args = parse_args()
