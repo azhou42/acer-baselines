@@ -10,6 +10,7 @@ import pickle
 from model import ActorCritic
 from utils import state_to_tensor, plot_line
 
+from rllab.misc import logger
 
 def test(rank, args, T, shared_model):
   torch.manual_seed(args.seed + rank)
@@ -92,8 +93,13 @@ def test(rank, args, T, shared_model):
 
       # Saving the data in csv format
       with open(os.path.join(save_dir, 'results.csv'), 'a') as f:
-        writer = csv.writer(f)
-        writer.writerow(fields)
+            writer = csv.writer(f)
+            writer.writerow(fields)
+      
+      logger.push_prefix('Epoch #%d | ' % T.value())
+      logger.record_tabular('AvgReward', sum(avg_rewards) / args.evaluation_episodes)
+      logger.record_tabular('AvgSteps', sum(avg_episode_lengths) / args.evaluation_episodes)
+      logger.dump_tabular(with_prefix=False)
 
       if args.evaluate:
         return

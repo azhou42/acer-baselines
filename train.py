@@ -10,6 +10,8 @@ from memory import EpisodicReplayMemory
 from model import ActorCritic
 from utils import state_to_tensor
 
+from rllab.misc import logger
+
 
 # Knuth's algorithm for generating Poisson samples
 def _poisson(lmbd):
