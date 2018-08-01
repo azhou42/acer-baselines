@@ -151,10 +151,7 @@ config.DOCKER_IMAGE = "haarnoja/sac"  # needs psutils
 config.AWS_IMAGE_ID = "ami-a3a8b3da"  # with docker already pulled
 
 ENV_PARAMS = {
-        'env': ['HalfCheetah-v1', 
-                'Walker-v1',
-                'Ant-v1',
-                'Humanoid-v1']
+        'env': ['Walker2d-v1']
 }
 def get_variants():
     env_params = ENV_PARAMS
@@ -179,7 +176,7 @@ def launch_experiments(variant_generator):
     exp_name = 'acer_test1'
     for i, variant in enumerate(variants):
         print("Experiment: {}/{}".format(i, num_experiments))
-        experiment_prefix = 'acer_baselines/' + variant['env'] + '/' 
+        experiment_prefix = 'acer_baselines_final/' + variant['env'] + '/' 
         experiment_name = (
             exp_name + '-' + str(i).zfill(2))
 
@@ -196,7 +193,6 @@ def launch_experiments(variant_generator):
             snapshot_gap=1000,
             sync_s3_pkl=False,
         )
-        return
 
 def main():
     # args = parse_args()

@@ -99,6 +99,7 @@ def test(rank, variant, T, shared_model):
       logger.push_prefix('Epoch #%d | ' % T.value())
       logger.record_tabular('AvgReward', sum(avg_rewards) / variant['evaluation-episodes'])
       logger.record_tabular('AvgSteps', sum(avg_episode_lengths) / variant['evaluation-episodes'])
+      logger.record_tabular('CurrentStep', T.value())
       logger.dump_tabular(with_prefix=False)
 
       if variant['evaluate']:
